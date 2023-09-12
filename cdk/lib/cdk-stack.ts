@@ -4,6 +4,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import {NodejsFunction} from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
+import {FunctionUrlAuthType} from 'aws-cdk-lib/aws-lambda';
+import {HttpMethod} from 'aws-cdk-lib/aws-events';
 
 export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -27,6 +29,9 @@ export class CdkStack extends cdk.Stack {
     handler: "handler"
   });
 
+  GetPushNotificationFunction.addFunctionUrl({
+    authType: FunctionUrlAuthType.NONE,
+  })
   NextAuthTable.grantReadData(GetPushNotificationFunction);
   }
 }

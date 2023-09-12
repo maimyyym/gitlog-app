@@ -62,11 +62,11 @@ const options: NextAuthOptions = {
           const USER_ACCESS_TOKEN = token;
 
           const webhookConfig = {
-            name: 'GitLogAppWebhook',
+            name: 'web',
             active: true,
             events: ['push'],
             config: {
-              url: 'https://krfljuebzob6lgar65pznkghs40jyege.lambda-url.ap-northeast-1.on.aws/', //仮！
+              url: 'https://dgzrtolcjutqrlwnmhbsnx77fq0wefjg.lambda-url.ap-northeast-1.on.aws/',
               content_type: 'json'
             }
           };
