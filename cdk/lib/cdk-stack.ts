@@ -6,6 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 import {FunctionUrlAuthType} from 'aws-cdk-lib/aws-lambda';
 import {HttpMethod} from 'aws-cdk-lib/aws-events';
+import {Duration} from 'aws-cdk-lib';
 
 export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -25,6 +26,8 @@ export class CdkStack extends cdk.Stack {
 
   const GetPushNotificationFunction = new NodejsFunction(this, 'GetPushNotificationFunction', {
     runtime: lambda.Runtime.NODEJS_18_X,
+    timeout: Duration.hours(0.25),
+    memorySize: 256,
     entry: path.join(__dirname, "../functions/index.ts"),
     handler: "handler"
   });

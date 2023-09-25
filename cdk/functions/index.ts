@@ -1,10 +1,12 @@
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { graphql } from "@octokit/graphql";
 
 const dynamoDB = new DynamoDBClient({});
 
 const extractRepoInfo = (eventBody: string) => { // anyは使いたくない, unknownはここ？？→stringなの？
   const body = JSON.parse(eventBody || "{}");
+  console.log('body:' + body);
   const pusherEmail = body.pusher && body.pusher.email; // この演算子の意味は？
   console.log(pusherEmail)
   return { pusherEmail };
@@ -18,7 +20,10 @@ const getIdByEmailInDynamoDB = async (email: string) => {
     ExpressionAttributeValues: {
       ":email": { S: `USER#${email}` },
     },
-    ProjectionExpression: "id, name",
+    ProjectionExpression: "id, #name",
+    ExpressionAttributeNames: {
+      "#name" : "name"
+    }
   });
 
   const response = await dynamoDB.send(command);
@@ -53,13 +58,60 @@ const getTokenById = async (id: string) => {
   }
 };
 
+
 export const handler = async (event: any = {}): Promise<any> => {
   const eventBody = event.body;
   const repoInfo = extractRepoInfo(eventBody);
-  const { id, name } = await getIdByEmailInDynamoDB(repoInfo.pusherEmail);
+  const user = await getIdByEmailInDynamoDB(repoInfo.pusherEmail);
+  const id = user?.id; // undefinedのハンドリング
+  const name = user?.name; // undefinedのハンドリング
   const token = await getTokenById(id as string); // アサーションはあまり使いたくない。undefinedをハンドリングする。
+
   // tokenを使ってリポジトリからリポジトリ名を取得。
-  // 
+
+  const graphqlWithAuth = graphql.defaults({
+  headers: {
+    authorization: `bearer ${token}`
+  }
+})
+
+  const entries: any = await graphqlWithAuth(
+    `
+    {
+      repository(owner: "${name}", name: "github-dialy") {
+        object(expression: "main:") {
+          ... on Tree {
+            entries {
+              name
+              type
+              path
+            }
+          }
+        }
+      }
+    }
+    `
+  )
+  const filePath = entries.repository.object.entries[1].path
+
+  const textData = await graphqlWithAuth(
+    `
+    {
+      repository(owner: "${name}", name: "github-dialy") {
+        object(expression: "main:${filePath}") {
+          ... on Blob {
+            text
+            oid
+          }
+        }
+      }
+    }
+    `
+  )
+
+  console.log('entries:' + JSON.stringify(entries));
+
+  console.log("textData: " + JSON.stringify(textData));
 
   return { statusCode: 200, body: "token:" + token };
 };
